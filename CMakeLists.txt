@@ -46,8 +46,8 @@ else()
     set(CL_CPP_BINDINGS_DIR "${OpenCL_INCLUDE_DIRS}/CL")
 endif()
 
-if (NOT EXISTS "${CL_CPP_BINDINGS_DIR}/cl.hpp") 
-    message(FATAL_ERROR "Error: The OpenCL C++ bindings were not found on your system.\nPlease download the 'cl.hpp' header from https://www.khronos.org/registry/cl/ and place the file in the '${CL_CPP_BINDINGS_DIR}' directory and try again.")
+if (NOT EXISTS "${CL_CPP_BINDINGS_DIR}/opencl.hpp" AND NOT EXISTS "${CL_CPP_BINDINGS_DIR}/cl.hpp") 
+    message(FATAL_ERROR "Error: The OpenCL C++ bindings were not found on your system.\nPlease install the 'opencl-clhpp-headers' package, or place 'opencl.hpp' in the '${CL_CPP_BINDINGS_DIR}' directory and try again.")
 endif()
 
 include_directories(src ${OpenCL_INCLUDE_DIRS})

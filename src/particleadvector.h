@@ -34,7 +34,10 @@ freely, subject to the following restrictions:
 #if defined(__APPLE__) || defined(__MACOSX)
     #include <OpenCL/cl.hpp>
 #else
-    #include <CL/cl.hpp>
+    #define CL_HPP_TARGET_OPENCL_VERSION 200
+    #define CL_HPP_MINIMUM_OPENCL_VERSION 200
+    #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
+    #include <CL/opencl.hpp>
 #endif
 
 #ifdef _MSC_VER 

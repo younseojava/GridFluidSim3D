@@ -23,7 +23,26 @@ freely, subject to the following restrictions:
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#include <limits>
+
 #include "clscalarfield.h"
+
+namespace {
+
+int chunkCountThatFits(cl_ulong memoryBytes, int chunkBytes) {
+    if (chunkBytes <= 0 || memoryBytes == 0) {
+        return 0;
+    }
+
+    cl_ulong count = memoryBytes / static_cast<cl_ulong>(chunkBytes);
+    cl_ulong maxCount = static_cast<cl_ulong>(std::numeric_limits<int>::max());
+    if (count > maxCount) {
+        return std::numeric_limits<int>::max();
+    }
+    return static_cast<int>(count);
+}
+
+}
 
 CLScalarField::CLScalarField() {
 }
@@ -111,6 +130,9 @@ void CLScalarField::addPoints(std::vector<vmath::vec3> &points,
                                     workGroupGrid, 
                                     chunks, 
                                     maxChunks);
+        if (chunks.empty()) {
+            break;
+        }
 
         _computePointScalarField(chunks, workGroupGrid);
     }
@@ -189,6 +211,9 @@ void CLScalarField::addPointValues(std::vector<vmath::vec3> &points,
                                     workGroupGrid, 
                                     chunks, 
                                     maxChunks);
+        if (chunks.empty()) {
+            break;
+        }
         _computePointValueScalarField(chunks, workGroupGrid);
     }
 
@@ -254,6 +279,9 @@ void CLScalarField::addPointValues(std::vector<vmath::vec3> &points,
                                     workGroupGrid, 
                                     chunks, 
                                     maxChunks);
+        if (chunks.empty()) {
+            break;
+        }
         _computePointValueScalarWeightField(chunks, workGroupGrid);
     }
 
@@ -1060,16 +1088,16 @@ int CLScalarField::_getMaxChunkLimit(int pointDataSize, int fieldDataSize, int o
     cl_ulong maxGlobalMem = _deviceInfo.cl_device_global_mem_size;
     cl_ulong maxAlloc = _deviceInfo.cl_device_max_mem_alloc_size;
 
-    int numPositionAllocItems = floor((double)maxAlloc / (double)pointDataSize);
-    int numFieldAllocItems = floor((double)maxAlloc / (double)fieldDataSize);
-    int numOffsetAllocItems = floor((double)maxAlloc / (double)offsetDataSize);
+    int numPositionAllocItems = chunkCountThatFits(maxAlloc, pointDataSize);
+    int numFieldAllocItems = chunkCountThatFits(maxAlloc, fieldDataSize);
+    int numOffsetAllocItems = chunkCountThatFits(maxAlloc, offsetDataSize);
 
     int allocLimitCount = fmin(fmin(numPositionAllocItems, 
                                     numFieldAllocItems),
                                     numOffsetAllocItems);
 
     int totalDataSize = pointDataSize + fieldDataSize + offsetDataSize;
-    int globalMemLimitCount = floor((double)maxGlobalMem / (double)totalDataSize);
+    int globalMemLimitCount = chunkCountThatFits(maxGlobalMem, totalDataSize);
 
     int hardwareLimit = fmin(allocLimitCount, globalMemLimitCount);
     int softwareLimit = _maxChunksPerComputation;
@@ -1348,7 +1376,7 @@ void CLScalarField::_setKernelArgs(cl::Kernel &kernel,
     _checkError(err, "Kernel::setArg() - chunk offset data");
 
     FLUIDSIM_ASSERT((unsigned int)localDataBytes <= _deviceInfo.cl_device_local_mem_size);
-    err = kernel.setArg(3, cl::__local(localDataBytes));
+    err = kernel.setArg(3, cl::Local(localDataBytes));
     _checkError(err, "Kernel::setArg() - local position data");
 
     err = kernel.setArg(4, numParticles);

@@ -22,7 +22,26 @@ freely, subject to the following restrictions:
     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#include <limits>
+
 #include "particleadvector.h"
+
+namespace {
+
+int chunkCountThatFits(cl_ulong memoryBytes, int chunkBytes) {
+    if (chunkBytes <= 0 || memoryBytes == 0) {
+        return 0;
+    }
+
+    cl_ulong count = memoryBytes / static_cast<cl_ulong>(chunkBytes);
+    cl_ulong maxCount = static_cast<cl_ulong>(std::numeric_limits<int>::max());
+    if (count > maxCount) {
+        return std::numeric_limits<int>::max();
+    }
+    return static_cast<int>(count);
+}
+
+}
 
 ParticleAdvector::ParticleAdvector() {
 }
@@ -844,15 +863,15 @@ int ParticleAdvector::_getMaxChunksPerComputation() {
     cl_ulong maxGlobalMem = _deviceInfo.cl_device_global_mem_size;
     cl_ulong maxAlloc = _deviceInfo.cl_device_max_mem_alloc_size;
 
-    int numPositionAllocItems = floor((double)maxAlloc / (double)positionSize);
-    int numVelocityAllocItems = floor((double)maxAlloc / (double)vfieldSize);
-    int numOffsetAllocItems = floor((double)maxAlloc / (double)offsetSize);
+    int numPositionAllocItems = chunkCountThatFits(maxAlloc, positionSize);
+    int numVelocityAllocItems = chunkCountThatFits(maxAlloc, vfieldSize);
+    int numOffsetAllocItems = chunkCountThatFits(maxAlloc, offsetSize);
 
     int allocLimitCount = fmin(fmin(numPositionAllocItems, 
                                     numVelocityAllocItems),
                                     numOffsetAllocItems);
 
-    int globalMemLimitCount = floor((double)maxGlobalMem / (double)totalSize);
+    int globalMemLimitCount = chunkCountThatFits(maxGlobalMem, totalSize);
 
     int hardwareLimit = fmin(allocLimitCount, globalMemLimitCount);
     int softwareLimit = _maxChunksPerComputation;
@@ -1014,7 +1033,7 @@ void ParticleAdvector::_setCLKernelArgs(DataBuffer &buffer, double dx) {
     int vfieldLocalBytes = _getChunkVelocityDataSize();
     FLUIDSIM_ASSERT((unsigned int)vfieldLocalBytes <= _deviceInfo.cl_device_local_mem_size);
 
-    err = _CLKernel.setArg(3, cl::__local(vfieldLocalBytes));
+    err = _CLKernel.setArg(3, cl::Local(vfieldLocalBytes));
     _checkError(err, "Kernel::setArg() - local vfield data");
 
     err = _CLKernel.setArg(4, (float)dx);

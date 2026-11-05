@@ -1148,6 +1148,7 @@ FluidBrickGrid* FluidSimulation::getFluidBrickGrid() {
     Initializing the Fluid Simulator
 ********************************************************************************/
 void FluidSimulation::_initializeLogFile() {
+    Config::ensureOutputDirectories();
     _logfile.setPath(Config::getLogsDirectory());
 }
 

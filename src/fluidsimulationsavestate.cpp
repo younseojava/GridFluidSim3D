@@ -29,12 +29,17 @@ FluidSimulationSaveState::~FluidSimulationSaveState() {
 }
 
 void FluidSimulationSaveState::saveState(std::string filename, FluidSimulation *_fluidsim) {
+    Config::ensureOutputDirectories();
+
     std::ofstream erasefile;
     erasefile.open(filename, std::ofstream::out | std::ofstream::trunc);
     erasefile.close();
 
     std::ofstream state(filename.c_str(), std::ios::out | std::ios::binary);
 
+    if (!state.is_open()) {
+        std::cerr << "ERROR: could not open save state file: " << filename << std::endl;
+    }
     FLUIDSIM_ASSERT(state.is_open());
 
     int i, j, k;

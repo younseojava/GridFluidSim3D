@@ -311,9 +311,11 @@ __kernel void tricubic_interpolate_kernel(__global float *particles,
 	size_t lid = get_local_id(0);
 	size_t gid = tid / get_local_size(0);
 
-    // Load fvield_data into local memory
-    if (lid < MAX_VFIELD_LOAD_LOCAL_ID) {
-        int local_offset = 4*lid;
+    // A velocity chunk is 1944 floats, copied 4 per thread. One pass needs
+    // 486 threads, but these GPUs allow only 256, so each thread repeats.
+    int local_size = get_local_size(0);
+    for (int base = (int)lid; base < MAX_VFIELD_LOAD_LOCAL_ID; base += local_size) {
+        int local_offset = 4 * base;
         int vfield_data_offset = gid * VFIELD_SIZE + local_offset;
 
         vfield[local_offset + 0] = vfield_data[vfield_data_offset + 0];

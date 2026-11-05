@@ -50,6 +50,7 @@ extern void setBakefilesDirectory(std::string dir);
 extern void setLogsDirectory(std::string dir);
 extern void setSavestatesDirectory(std::string dir);
 extern void setTempDirectory(std::string dir);
+extern void ensureOutputDirectories();
 
 }
 

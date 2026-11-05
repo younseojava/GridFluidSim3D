@@ -19,6 +19,42 @@ freely, subject to the following restrictions:
 */
 #include "config.h"
 
+#include <cerrno>
+#include <sys/stat.h>
+
+namespace {
+
+void makeDirectoryTree(const std::string &path) {
+    if (path.empty()) {
+        return;
+    }
+
+    std::string partial;
+    partial.reserve(path.size());
+    for (std::string::size_type i = 0; i < path.size(); i++) {
+        char c = path[i];
+        partial.push_back(c);
+        bool isSeparator = (c == '/');
+        bool isLast = (i + 1 == path.size());
+        if (!isSeparator && !isLast) {
+            continue;
+        }
+        if (partial.size() <= 1) {
+            continue;
+        }
+
+        std::string dir = partial;
+        if (isSeparator) {
+            dir.erase(dir.size() - 1);
+        }
+        if (mkdir(dir.c_str(), 0755) != 0 && errno != EEXIST) {
+            return;
+        }
+    }
+}
+
+}
+
 namespace Config {
     std::string executableDirectory = CONFIG_EXECUTABLE_DIR;
     std::string outputDirectory     = CONFIG_OUTPUT_DIR;
@@ -69,6 +105,14 @@ namespace Config {
 
     void setTempDirectory(std::string dir) {
         tempDirectory = dir;
+    }
+
+    void ensureOutputDirectories() {
+        makeDirectoryTree(outputDirectory);
+        makeDirectoryTree(bakefilesDirectory);
+        makeDirectoryTree(logsDirectory);
+        makeDirectoryTree(savestatesDirectory);
+        makeDirectoryTree(tempDirectory);
     }
 
 }
